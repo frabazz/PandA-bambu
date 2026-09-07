@@ -62,6 +62,21 @@
 #define GET_ARG_PT(fn, i) (&*std::next(fn->arg_begin(), i))
 #endif
 
+static uint64_t getOrigArgNo(const Argument* arg)
+{
+   const auto& attrs = arg->getParent()->getAttributes();
+   const auto attr = attrs.getParamAttr(arg->getArgNo(), "bambu.orig_index");
+   if(attr.isStringAttribute())
+   {
+      uint64_t idx;
+      if(!attr.getValueAsString().getAsInteger(10, idx))
+      {
+         return idx;
+      }
+   }
+   return arg->getArgNo();
+}
+
 void printModuleOnFile(Module& M, const std::string& outPath)
 {
    std::error_code EC;
@@ -470,7 +485,7 @@ void collectArrayPartitionFromArg(ArrPartCtx& arrPartCtx, Argument* arg, std::ve
    {
       auto nodeFn = arrPartCtx.doc->child("module").find_child_by_attribute("function", "symbol", fnName.data());
       auto nodeParam = nodeFn.child("parameters")
-                           .find_child_by_attribute("parameter", "index", std::to_string(arg->getArgNo()).c_str());
+                           .find_child_by_attribute("parameter", "index", std::to_string(getOrigArgNo(arg)).c_str());
       assert(!nodeParam.empty());
       std::string argName = nodeParam.attribute("bundle").as_string();
       std::vector<size_t> dims = getDimsFromString(nodeParam.attribute("array_dims").as_string());
@@ -678,7 +693,7 @@ void setArrPartArg(ArrPartCtx& arrPartCtx, Argument* arg, uint64_t format, uint6
    auto& args = arrPartCtx.fnTable.try_emplace(fnName, arg->getParent()).first->second.args;
    auto nodeFn = doc.child("module").find_child_by_attribute("function", "symbol", fnName.data());
    auto nodeParam = nodeFn.child("parameters")
-                        .find_child_by_attribute("parameter", "index", std::to_string(arg->getArgNo()).c_str());
+                        .find_child_by_attribute("parameter", "index", std::to_string(getOrigArgNo(arg)).c_str());
    std::string argName = nodeParam.attribute("bundle").as_string();
    std::vector<size_t> completeDims = getDimsFromString(nodeParam.attribute("array_dims").as_string());
 
